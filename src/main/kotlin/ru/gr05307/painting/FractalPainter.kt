@@ -14,7 +14,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.cos
 import kotlin.math.sin
 
-class FractalPainter(private val plain: Plain): Painter {
+class FractalPainter(var plain: Plain): Painter {
 
     //private val fractalCoroutine = CoroutineScope(Dispatchers.Default)
 
