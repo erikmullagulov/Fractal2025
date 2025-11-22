@@ -10,6 +10,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import ru.gr05307.ui.PaintPanel
 import ru.gr05307.ui.SelectionPanel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -20,25 +23,33 @@ import ru.gr05307.painting.convertation.Plain
 class FractalAnimation(
     private val firstFramePlain: Plain,
     private val lastFramePlain: Plain,
-    private val viewModel: MainViewModel,
+    private val frameOut: (ImageBitmap) -> Unit = {},
     private val fractalPainter: FractalPainter,
-    private val animationOn: Boolean
+    val animationOn: Boolean
 ) {
-    private val fractalFrames = mutableListOf<ImageBitmap>()
 
-    private suspend fun createFrames(nFrames: Int = 30) = withContext(Dispatchers.Default) {
-        for (n in 1..nFrames){
-            val d = n.toDouble() / nFrames
-            val tempFramePlain = Plain(
-                xMin = (lastFramePlain.xMin - firstFramePlain.xMin) * d + firstFramePlain.xMin,
-                xMax = (lastFramePlain.xMax - firstFramePlain.xMax) * d + firstFramePlain.xMax,
-                yMin = (lastFramePlain.yMin - firstFramePlain.yMin) * d + firstFramePlain.yMin,
-                yMax = (lastFramePlain.yMax - firstFramePlain.yMax) * d + firstFramePlain.yMax,
-                width = firstFramePlain.width,
-                height = firstFramePlain.height
-            )
-            fractalPainter.plain = tempFramePlain
-            fractalFrames += plainToImage(tempFramePlain)
+    suspend fun startAnimation(nFrames: Int = 60) = coroutineScope {
+        if (!animationOn) return@coroutineScope
+
+        val jobs = (1..nFrames).map { n ->
+            async(Dispatchers.Default) {
+                val d = n.toDouble() / nFrames
+                val tempFramePlain = Plain(
+                    xMin = (lastFramePlain.xMin - firstFramePlain.xMin) * d + firstFramePlain.xMin,
+                    xMax = (lastFramePlain.xMax - firstFramePlain.xMax) * d + firstFramePlain.xMax,
+                    yMin = (lastFramePlain.yMin - firstFramePlain.yMin) * d + firstFramePlain.yMin,
+                    yMax = (lastFramePlain.yMax - firstFramePlain.yMax) * d + firstFramePlain.yMax,
+                    width = firstFramePlain.width,
+                    height = firstFramePlain.height
+                )
+                fractalPainter.plain = tempFramePlain
+                n to plainToImage(tempFramePlain)
+            }
+        }
+        val frames = jobs.awaitAll().sortedBy { it.first }.map { it.second }
+        for (frame in frames) {
+            frameOut(frame)
+            delay(30)
         }
     }
 
@@ -56,9 +67,5 @@ class FractalAnimation(
         }
         return image
     }
-
-    private suspend fun startAnimation() = withContext(Dispatchers.Default) {
-
-        }
 
 }

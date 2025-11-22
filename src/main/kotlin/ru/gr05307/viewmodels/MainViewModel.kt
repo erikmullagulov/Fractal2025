@@ -17,12 +17,13 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import ru.gr05307.animation.FractalAnimation
 import ru.gr05307.painting.FractalPainter
 import ru.gr05307.painting.convertation.Converter
 import ru.gr05307.painting.convertation.Plain
 
 class MainViewModel{
-    var fractalImage: ImageBitmap = ImageBitmap(0, 0)
+    var fractalImage by mutableStateOf(ImageBitmap(0, 0))
     var selectionOffset by mutableStateOf(Offset(0f, 0f))
     var selectionSize by mutableStateOf(Size(0f, 0f))
     private val plain = Plain(-2.0,1.0,-1.0,1.0)
@@ -54,6 +55,7 @@ class MainViewModel{
     }
 
     fun onStopSelecting(){
+        val firstFramePlain = plain.copy()
         val xMin = Converter.xScr2Crt(selectionOffset.x, plain)
         val yMin = Converter.yScr2Crt(selectionOffset.y+selectionSize.height, plain)
         val xMax = Converter.xScr2Crt(selectionOffset.x+selectionSize.width, plain)
@@ -63,7 +65,18 @@ class MainViewModel{
         plain.xMax = xMax
         plain.yMax = yMax
         selectionSize = Size(0f,0f)
-        mustRepaint = true
+        val animation = FractalAnimation(
+            firstFramePlain = firstFramePlain,
+            lastFramePlain = plain,
+            fractalPainter = fractalPainter,
+            frameOut = { frame -> fractalImage = frame },
+            animationOn = true
+        )
+        CoroutineScope(Dispatchers.Default).launch {
+            animation.startAnimation()
+            fractalPainter.plain = plain
+            mustRepaint = true
+        }
     }
 
     fun onSelecting(offset: Offset){
