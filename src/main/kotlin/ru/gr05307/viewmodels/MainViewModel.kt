@@ -68,7 +68,6 @@ class MainViewModel{
         val animation = FractalAnimation(
             firstFramePlain = firstFramePlain,
             lastFramePlain = plain,
-            fractalPainter = fractalPainter,
             frameOut = { frame -> fractalImage = frame },
             animationOn = true
         )
