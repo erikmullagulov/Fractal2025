@@ -1,10 +1,7 @@
 package ru.gr05307.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.onDrag
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -14,6 +11,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.input.pointer.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -25,12 +23,9 @@ fun PaintPanel(
     val graphicsLayer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
     Canvas(modifier.drawWithContent {
-        // call record to capture the content in the graphics layer
         graphicsLayer.record {
-            // draw the contents of the composable into the graphics layer
             this@drawWithContent.drawContent()
         }
-        // draw the graphics layer on the visible canvas
         drawLayer(graphicsLayer)
         scope.launch { onImageUpdate(graphicsLayer.toImageBitmap()) }
     }) {
@@ -38,7 +33,6 @@ fun PaintPanel(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SelectionPanel(
     offset: Offset,
@@ -47,12 +41,62 @@ fun SelectionPanel(
     onDragStart: (Offset) -> Unit = {},
     onDragEnd: () -> Unit = {},
     onDrag: (Offset) -> Unit = {},
+    onPanStart: (Offset) -> Unit = {},
+    onPanEnd: () -> Unit = {},
+    onPan: (Offset) -> Unit = {},
 ){
-    Canvas(modifier = modifier.onDrag(
-        onDragStart = onDragStart,
-        onDragEnd = onDragEnd,
-        onDrag = onDrag,
-    )){
+    var dragButton by remember { mutableStateOf<PointerButton?>(null) }
+
+    Canvas(modifier = modifier.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+
+                when (event.type) {
+                    PointerEventType.Press -> {
+                        val buttons = event.buttons
+                        dragButton = when {
+                            buttons.isPrimaryPressed -> PointerButton.Primary
+                            buttons.isSecondaryPressed -> PointerButton.Secondary
+                            else -> null
+                        }
+
+                        val position = event.changes.first().position
+                        when (dragButton) {
+                            PointerButton.Primary -> onDragStart(position)
+                            PointerButton.Secondary -> onPanStart(position)
+                            else -> {}
+                        }
+                    }
+
+                    PointerEventType.Move -> {
+                        if (dragButton != null) {
+                            val change = event.changes.first()
+                            val dragAmount = change.position - change.previousPosition
+
+                            when (dragButton) {
+                                PointerButton.Primary -> onDrag(dragAmount)
+                                PointerButton.Secondary -> onPan(dragAmount)
+                                else -> {}
+                            }
+                            change.consume()
+                        }
+                    }
+
+                    PointerEventType.Release -> {
+                        if (dragButton != null) {
+                            when (dragButton) {
+                                PointerButton.Primary -> onDragEnd()
+                                PointerButton.Secondary -> onPanEnd()
+                                else -> {}
+                            }
+                            dragButton = null
+                        }
+                    }
+                }
+            }
+        }
+    }){
         this.drawRect(Color.Blue, offset, size, alpha = 0.2f)
     }
 }
