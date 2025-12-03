@@ -26,21 +26,15 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import com.sun.tools.javac.Main
 import ru.gr05307.ui.PaintPanel
 import ru.gr05307.ui.SelectionPanel
 import ru.gr05307.viewmodels.MainViewModel
@@ -103,7 +97,7 @@ fun TourControlPanel(
     val scope = rememberCoroutineScope()
 
     Card(
-        modifier = Modifier,
+        modifier = modifier,
         elevation = 8.dp,
         backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.9f)
     ) {}

@@ -7,29 +7,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import ru.gr05307.animation.TourAnimation
 import ru.gr05307.painting.FractalPainter
 import ru.gr05307.painting.convertation.Converter
 import ru.gr05307.painting.convertation.Plain
 import java.util.Date
 import java.util.UUID
 import kotlin.math.pow
-import kotlin.math.sign
-import kotlin.uuid.Uuid
 
 class MainViewModel{
     var fractalImage: ImageBitmap = ImageBitmap(0, 0)
@@ -62,13 +54,7 @@ class MainViewModel{
         val yMax: Double,
         val timestamp: Long = System.currentTimeMillis()
     ) {
-      val zoomLevel: Double
-          get() = 3.0 / (xMax - xMin)
-
-        fun getCenterX(): Double = (xMin + xMax) / 2
-        fun getCenterY(): Double = (yMin + yMax) / 2
-
-        override fun toString(): String {
+    override fun toString(): String {
             return "$name: X[$xMin, $xMax], Y[$yMin, $yMax]"
         }
     }
@@ -201,16 +187,6 @@ class MainViewModel{
                     }
                     delay((1000 / fps).toLong())
                 }
-
-                /*
-                isTourPlaying = false
-                val lastFrame = tourKeyframes.last()
-                plain.xMin = lastFrame.xMin
-                plain.xMax = lastFrame.xMax
-                plain.yMin = lastFrame.yMin
-                plain.yMax = lastFrame.yMax
-                mustRepaint = true
-                */
 
             } catch (e: CancellationException) {
             } finally {
