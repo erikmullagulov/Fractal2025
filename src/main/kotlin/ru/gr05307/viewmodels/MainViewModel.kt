@@ -9,9 +9,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -24,6 +29,9 @@ import ru.gr05307.painting.convertation.Plain
 import java.util.Date
 import java.util.UUID
 import kotlin.math.pow
+import ru.gr05307.ExportFractal.FractalExporter
+import javax.swing.undo.UndoManager
+import ru.gr05307.rollback.UndoManager
 
 class MainViewModel {
     var fractalImage: ImageBitmap = ImageBitmap(0, 0)
@@ -32,6 +40,36 @@ class MainViewModel {
     private val plain = Plain(-2.0, 1.0, -1.0, 1.0)
     private val fractalPainter = FractalPainter(plain)
     private var mustRepaint by mutableStateOf(true)
+    private val undoManager = UndoManager(maxSize = 100)
+
+    // animation variables
+    val tourKeyframes = mutableStateListOf<TourKeyframe>()
+    var isTourPlaying by mutableStateOf(false)
+    var currentTourFrame by mutableStateOf(0)
+    var totalTourFrames by mutableStateOf(0)
+    var tourProgress by mutableStateOf(0f)
+    var showTourControls by mutableStateOf(false)
+    private var tourJob: Job? = null
+    private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    data class TourKeyframe(
+        val id: String = UUID.randomUUID().toString(),
+        val name: String = "Frame ${Date().time}",
+        val xMin: Double,
+        val xMax: Double,
+        val yMin: Double,
+        val yMax: Double,
+        val timestamp: Long = System.currentTimeMillis()
+    ) {
+        override fun toString(): String {
+            return "$name: X[$xMin, $xMax], Y[$yMin, $yMax]"
+        }
+    }
+
+    init {
+        addCurrentViewAsKeyframe("Initial view")
+    }
+
 
     /** Обновление размеров окна с сохранением пропорций */
     private fun updatePlainSize(newWidth: Float, newHeight: Float) {
@@ -57,41 +95,6 @@ class MainViewModel {
     }
 
     /** Рисование фрактала */
-    // video export
-   //var isExportingVideo by mutableStateOf(false)
-    //var exportingProgress by mutableStateOf(0f)
-
-    // animation variables
-    val tourKeyframes = mutableStateListOf<TourKeyframe>()
-    var isTourPlaying by mutableStateOf(false)
-    var currentTourFrame by mutableStateOf(0)
-    var totalTourFrames by mutableStateOf(0)
-    var tourProgress by mutableStateOf(0f)
-    var showTourControls by mutableStateOf(false)
-    private var tourJob: Job? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
-    data class TourKeyframe(
-        val id: String = UUID.randomUUID().toString(),
-        val name: String = "Frame ${Date().time}",
-        val xMin: Double,
-        val xMax: Double,
-        val yMin: Double,
-        val yMax: Double,
-        val timestamp: Long = System.currentTimeMillis()
-    ) {
-    override fun toString(): String {
-            return "$name: X[$xMin, $xMax], Y[$yMin, $yMax]"
-        }
-    }
-
-    init {
-        addCurrentViewAsKeyframe("Initial view")
-    }
-
-    //private val tourAnimation = TourAnimation()
-    //val animationState = tourAnimation.animationState
-
     fun paint(scope: DrawScope) = runBlocking {
         updatePlainSize(scope.size.width, scope.size.height)
 
@@ -121,9 +124,17 @@ class MainViewModel {
         }
     }
 
+    /** Обновление выделяемой области */
+    fun onSelecting(offset: Offset) {
+        if (!isTourPlaying)
+            selectionSize = Size(selectionSize.width + offset.x, selectionSize.height + offset.y)
+    }
+
     /** Завершение выделения и масштабирование */
     fun onStopSelecting() {
         if (selectionSize.width == 0f || selectionSize.height == 0f) return
+
+        undoManager.save(plain.copy())
 
         val aspect = plain.aspectRatio
         var selWidth = selectionSize.width
@@ -154,12 +165,6 @@ class MainViewModel {
             selectionSize = Size(0f, 0f)
             mustRepaint = true
         }
-    }
-
-    /** Обновление выделяемой области */
-    fun onSelecting(offset: Offset) {
-        if (!isTourPlaying)
-            selectionSize = Size(selectionSize.width + offset.x, selectionSize.height + offset.y)
     }
 
     // Tour functions
@@ -294,4 +299,37 @@ class MainViewModel {
     fun launch(block: suspend CoroutineScope.() -> Unit): Job {
         return coroutineScope.launch(block = block)
     }
+
+    fun canUndo(): Boolean = undoManager.canUndo()
+
+    fun performUndo() {
+        val prevState = undoManager.undo()
+        if (prevState != null) {
+            plain.xMin = prevState.xMin
+            plain.xMax = prevState.xMax
+            plain.yMin = prevState.yMin
+            plain.yMax = prevState.yMax
+            selectionSize = Size(0f, 0f)
+            mustRepaint = true
+        }
+    }
+
+    fun onPanning(offset: Offset){
+        // Конвертируем пиксельное смещение в смещение в координатах комплексной плоскости
+        val dx = -offset.x / plain.xDen
+        val dy = offset.y / plain.yDen
+
+        plain.xMin += dx
+        plain.xMax += dx
+        plain.yMin += dy
+        plain.yMax += dy
+
+        mustRepaint = true
+    }
+
+    fun saveFractalToJpg(path: String) {
+        val exporter = FractalExporter(plain)
+        exporter.saveJPG(path)
+    }
 }
+
