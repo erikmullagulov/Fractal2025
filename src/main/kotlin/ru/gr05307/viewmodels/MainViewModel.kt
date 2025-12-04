@@ -14,31 +14,15 @@ import ru.gr05307.painting.FractalPainter
 import ru.gr05307.painting.convertation.Converter
 import ru.gr05307.painting.convertation.Plain
 
-class MainViewModel{
+class MainViewModel {
     var fractalImage: ImageBitmap = ImageBitmap(0, 0)
     var selectionOffset by mutableStateOf(Offset(0f, 0f))
     var selectionSize by mutableStateOf(Size(0f, 0f))
-    private val plain = Plain(-2.0,1.0,-1.0,1.0)
+    private val plain = Plain(-2.0, 1.0, -1.0, 1.0)
     private val fractalPainter = FractalPainter(plain)
     private var mustRepaint by mutableStateOf(true)
 
-    fun paint(scope: DrawScope) = runBlocking {
-        plain.width = scope.size.width
-        plain.height = scope.size.height
-        if (mustRepaint
-            || fractalImage.width != plain.width.toInt()
-            || fractalImage.height != plain.height.toInt()
-        ) {
-            launch (Dispatchers.Default) {
-                fractalPainter.paint(scope)
-            }
-        }
-        else
-            scope.drawImage(fractalImage)
-        mustRepaint = false
-    }
-
-    //Обновление размеров окна с сохранением пропорций
+    // Обновление размеров окна с сохранением пропорций
     private fun updatePlainSize(newWidth: Float, newHeight: Float) {
         plain.width = newWidth
         plain.height = newHeight
@@ -61,44 +45,68 @@ class MainViewModel{
         }
     }
 
+    fun paint(scope: DrawScope) = runBlocking {
+        updatePlainSize(scope.size.width, scope.size.height)
+
+        if (mustRepaint
+            || fractalImage.width != plain.width.toInt()
+            || fractalImage.height != plain.height.toInt()
+        ) {
+            launch(Dispatchers.Default) {
+                fractalPainter.paint(scope)
+            }
+        } else {
+            scope.drawImage(fractalImage)
+        }
+        mustRepaint = false
+    }
+
+    /** Обновление ImageBitmap после рисования */
     fun onImageUpdate(image: ImageBitmap) {
         fractalImage = image
     }
 
-    // Левая кнопка - выделение для масштабирования
-    fun onStartSelecting(offset: Offset){
-        this.selectionOffset = offset
+    // Начало выделения области
+    fun onStartSelecting(offset: Offset) {
+        selectionOffset = offset
+        selectionSize = Size(0f, 0f)
     }
 
-    fun onStopSelecting(){
-        if (selectionSize.width != 0f && selectionSize.height != 0f) {
-            val xMin = Converter.xScr2Crt(selectionOffset.x, plain)
-            val yMin = Converter.yScr2Crt(selectionOffset.y+selectionSize.height, plain)
-            val xMax = Converter.xScr2Crt(selectionOffset.x+selectionSize.width, plain)
-            val yMax = Converter.yScr2Crt(selectionOffset.y, plain)
-            plain.xMin = xMin
-            plain.yMin = yMin
-            plain.xMax = xMax
-            plain.yMax = yMax
-            mustRepaint = true
-        }
-        selectionSize = Size(0f,0f)
-    }
-
-    fun onSelecting(offset: Offset){
+    // Обновление выделяемой области
+    fun onSelecting(offset: Offset) {
         selectionSize = Size(selectionSize.width + offset.x, selectionSize.height + offset.y)
     }
 
-    fun onPanning(offset: Offset){
-        // Конвертируем пиксельное смещение в смещение в координатах комплексной плоскости
-        val dx = -offset.x / plain.xDen
-        val dy = offset.y / plain.yDen
+    // Завершение выделения и масштабирование
+    fun onStopSelecting() {
+        if (selectionSize.width == 0f || selectionSize.height == 0f) return
 
-        plain.xMin += dx
-        plain.xMax += dx
-        plain.yMin += dy
-        plain.yMax += dy
+        val aspect = plain.aspectRatio
+        var selWidth = selectionSize.width
+        var selHeight = selectionSize.height
 
+        // Сохраняем пропорции, центрируя выделение
+        val selAspect = selWidth / selHeight
+        if (selAspect > aspect) {
+            // ширина больше, подгоняем высоту
+            selHeight = (selWidth / aspect).toFloat()
+        } else {
+            // высота больше, подгоняем ширину
+            selWidth = (selHeight * aspect).toFloat()
+        }
+
+        // Рассчитываем новые границы фрактала
+        val xMin = Converter.xScr2Crt(selectionOffset.x, plain)
+        val xMax = Converter.xScr2Crt(selectionOffset.x + selWidth, plain)
+        val yMin = Converter.yScr2Crt(selectionOffset.y + selHeight, plain)
+        val yMax = Converter.yScr2Crt(selectionOffset.y, plain)
+
+        plain.xMin = xMin
+        plain.xMax = xMax
+        plain.yMin = yMin
+        plain.yMax = yMax
+
+        selectionSize = Size(0f, 0f)
         mustRepaint = true
     }
 }
