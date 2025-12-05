@@ -3,7 +3,6 @@ package ru.gr05307.julia
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -31,12 +30,24 @@ fun JuliaPanel(
     if (c == null) return
 
     var imageState by remember { mutableStateOf<List<List<Color>>?>(null) }
-    var panelSize by remember { mutableStateOf(IntSize(300, 200)) }
+    var panelSize by remember { mutableStateOf(IntSize.Zero) }
+    var isRendering by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // Обработка изменения размера
     LaunchedEffect(c, panelSize) {
-        scope.launch(Dispatchers.Default) {
-            imageState = renderJulia(c, panelSize.width, panelSize.height)
+        // Проверяем, что размер больше нуля и не происходит рендеринг
+        if (panelSize.width > 0 && panelSize.height > 0 && !isRendering) {
+            isRendering = true
+            scope.launch(Dispatchers.Default) {
+                try {
+                    imageState = renderJulia(c, panelSize.width, panelSize.height)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isRendering = false
+                }
+            }
         }
     }
 
@@ -77,34 +88,46 @@ fun JuliaPanel(
                 .fillMaxSize()
                 .padding(top = 30.dp) // Отступ для заголовка
         ) {
-            panelSize = IntSize(size.width.toInt(), size.height.toInt())
-            val img = imageState ?: return@Canvas
-            val w = size.width.toInt()
-            val h = size.height.toInt()
+            val newSize = IntSize(size.width.toInt(), size.height.toInt())
+            if (newSize.width > 0 && newSize.height > 0 && newSize != panelSize) {
+                panelSize = newSize
+            }
 
-            for (x in 0 until w) {
-                for (y in 0 until h) {
-                    drawRect(
-                        color = img[x][y],
-                        topLeft = androidx.compose.ui.geometry.Offset(x.toFloat(), y.toFloat()),
-                        size = androidx.compose.ui.geometry.Size(1f, 1f)
-                    )
+            val img = imageState ?: return@Canvas
+
+            // Проверяем, что размеры изображения соответствуют размерам Canvas
+            val w = minOf(size.width.toInt(), img.size)
+            val h = if (w > 0) minOf(size.height.toInt(), img[0].size) else 0
+
+            if (w > 0 && h > 0) {
+                for (x in 0 until w) {
+                    for (y in 0 until h) {
+                        drawRect(
+                            color = img[x][y],
+                            topLeft = androidx.compose.ui.geometry.Offset(x.toFloat(), y.toFloat()),
+                            size = androidx.compose.ui.geometry.Size(1f, 1f)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// Оптимизированная версия рендеринга для маленького размера
+// Оптимизированная версия рендеринга
 private fun renderJulia(c: Complex, w: Int, h: Int): List<List<Color>> {
+    // Гарантируем минимальный размер и защищаем от некорректных значений
+    val safeWidth = maxOf(1, w)
+    val safeHeight = maxOf(1, h)
+
     val maxIter = 200 // Меньше итераций для быстрого отображения
-    val result = List(w) { MutableList(h) { Color.Black } }
+    val result = List(safeWidth) { MutableList(safeHeight) { Color.Black } }
 
     val scale = 2.0 // Больший масштаб для лучшей детализации в маленьком окне
-    for (xi in 0 until w) {
-        val re = (xi - w/2.0) / (w/2.0) * scale
-        for (yi in 0 until h) {
-            val im = (yi - h/2.0) / (h/2.0) * scale
+    for (xi in 0 until safeWidth) {
+        val re = (xi - safeWidth/2.0) / (safeWidth/2.0) * scale
+        for (yi in 0 until safeHeight) {
+            val im = (yi - safeHeight/2.0) / (safeHeight/2.0) * scale
             var z = Complex(re, im)
             var iter = 0
             while (iter < maxIter && z.absoluteValue2 < 4) {

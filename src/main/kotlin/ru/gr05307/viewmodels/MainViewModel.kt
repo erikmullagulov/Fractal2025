@@ -33,6 +33,9 @@ class MainViewModel {
     private var mustRepaint by mutableStateOf(true)
     private val undoManager = UndoManager(maxSize = 100)
 
+    // Флаг для закрытия панели Жюлиа
+    var shouldCloseJuliaPanel by mutableStateOf(false)
+
     /** Обновление размеров окна с сохранением пропорций */
     private fun updatePlainSize(newWidth: Float, newHeight: Float) {
         plain.width = newWidth
@@ -122,6 +125,7 @@ class MainViewModel {
 
         selectionSize = Size(0f, 0f)
         mustRepaint = true
+        shouldCloseJuliaPanel = true // Устанавливаем флаг для закрытия
     }
 
     fun canUndo(): Boolean = undoManager.canUndo()
@@ -135,6 +139,7 @@ class MainViewModel {
             plain.yMax = prevState.yMax
             selectionSize = Size(0f, 0f)
             mustRepaint = true
+            shouldCloseJuliaPanel = true // Устанавливаем флаг для закрытия
         }
     }
 
@@ -149,6 +154,7 @@ class MainViewModel {
         plain.yMax += dy
 
         mustRepaint = true
+        shouldCloseJuliaPanel = true // Устанавливаем флаг для закрытия
     }
 
     fun saveFractalToJpg(path: String) {
@@ -156,4 +162,8 @@ class MainViewModel {
         exporter.saveJPG(path)
     }
 
+    // Сброс флага закрытия (вызывается после закрытия панели)
+    fun resetCloseJuliaFlag() {
+        shouldCloseJuliaPanel = false
+    }
 }

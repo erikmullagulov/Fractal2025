@@ -50,6 +50,11 @@ class JuliaViewModelWrapper(
     fun onPanning(offset: androidx.compose.ui.geometry.Offset) = baseViewModel.onPanning(offset)
     fun saveFractalToJpg(path: String) = baseViewModel.saveFractalToJpg(path)
 
+    // Добавка Артема. Для отслеживания изменений
+    fun shouldCloseJuliaPanel() = baseViewModel.shouldCloseJuliaPanel
+    fun resetCloseJuliaFlag() = baseViewModel.resetCloseJuliaFlag()
+        // конец добавки
+
     // Переопределяем обработку кликов
     fun onPointClicked(x: Float, y: Float) {
         val re = ru.gr05307.painting.convertation.Converter.xScr2Crt(x, baseViewModel.plain)
@@ -76,9 +81,18 @@ fun main(): Unit = application {
             JuliaViewModelWrapper(baseViewModel) { complex ->
                 currentJuliaPoint = complex
                 showJuliaPanel = true // Автоматически показываем панель при выборе точки
+                baseViewModel.resetCloseJuliaFlag() // Сбрасываем флаг при открытии новой панели
             }
         }
 
+        // Отслеживаем изменения фрактала и закрываем панель Жюлиа при необходимости
+        LaunchedEffect(wrappedViewModel.shouldCloseJuliaPanel()) {
+            if (wrappedViewModel.shouldCloseJuliaPanel() && showJuliaPanel) {
+                showJuliaPanel = false
+                currentJuliaPoint = null
+                wrappedViewModel.resetCloseJuliaFlag()
+            }
+        }
         // Переезд Appa:
         MaterialTheme {
             Row(modifier = Modifier.fillMaxSize()) {
