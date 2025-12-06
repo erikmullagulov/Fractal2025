@@ -22,15 +22,15 @@ import ru.gr05307.ExportFractal.FractalExporter
 import ru.gr05307.painting.*
 import ru.gr05307.painting.FractalFunction
 import ru.gr05307.painting.ColorFunction
+import ru.gr05307.math.Complex
 import ru.gr05307.painting.*
 import ru.gr05307.rollback.UndoManager
-
 
 class MainViewModel {
     var fractalImage: ImageBitmap = ImageBitmap(0, 0)
     var selectionOffset by mutableStateOf(Offset(0f, 0f))
     var selectionSize by mutableStateOf(Size(0f, 0f))
-    private val plain = Plain(-2.0,1.0,-1.0,1.0)
+    val plain = Plain(-2.0,1.0,-1.0,1.0)
     //private val fractalPainter = FractalPainter(plain)
     private var mustRepaint by mutableStateOf(true)
     private val undoManager = UndoManager(maxSize = 100)
@@ -40,7 +40,13 @@ class MainViewModel {
 
     private val fractalPainter = FractalPainter(plain, currentFractalFunc, currentColorFunc)
 
-    // Обновление размеров окна с сохранением пропорций
+    var shouldCloseJuliaPanel: ((Boolean) -> Unit)? = null
+
+    var onJuliaPointSelected: ((Complex) -> Unit)? = null
+
+    private var _shouldCloseJuliaPanel by mutableStateOf(false)
+
+    /** Обновление размеров окна с сохранением пропорций */
     private fun updatePlainSize(newWidth: Float, newHeight: Float) {
         plain.width = newWidth
         plain.height = newHeight
@@ -63,7 +69,7 @@ class MainViewModel {
         }
     }
 
-    // Рисование фрактала
+    /** Рисование фрактала */
     fun paint(scope: DrawScope) = runBlocking {
         updatePlainSize(scope.size.width, scope.size.height)
 
@@ -80,23 +86,23 @@ class MainViewModel {
         mustRepaint = false
     }
 
-    // Обновление ImageBitmap после рисования
+    /** Обновление ImageBitmap после рисования */
     fun onImageUpdate(image: ImageBitmap) {
         fractalImage = image
     }
 
-    // Начало выделения области
+    /** Начало выделения области */
     fun onStartSelecting(offset: Offset) {
         selectionOffset = offset
         selectionSize = Size(0f, 0f)
     }
 
-    // Обновление выделяемой области
+    /** Обновление выделяемой области */
     fun onSelecting(offset: Offset) {
         selectionSize = Size(selectionSize.width + offset.x, selectionSize.height + offset.y)
     }
 
-    // Завершение выделения и масштабирование
+    /** Завершение выделения и масштабирование */
     fun onStopSelecting() {
         if (selectionSize.width == 0f || selectionSize.height == 0f) return
 
@@ -129,6 +135,8 @@ class MainViewModel {
 
         selectionSize = Size(0f, 0f)
         mustRepaint = true
+        _shouldCloseJuliaPanel = true
+        shouldCloseJuliaPanel?.invoke(true)
     }
 
     fun canUndo(): Boolean = undoManager.canUndo()
@@ -142,6 +150,8 @@ class MainViewModel {
             plain.yMax = prevState.yMax
             selectionSize = Size(0f, 0f)
             mustRepaint = true
+            _shouldCloseJuliaPanel = true
+            shouldCloseJuliaPanel?.invoke(true)
         }
     }
 
@@ -156,11 +166,25 @@ class MainViewModel {
         plain.yMax += dy
 
         mustRepaint = true
+        _shouldCloseJuliaPanel = true
+        shouldCloseJuliaPanel?.invoke(true)
     }
 
     fun saveFractalToJpg(path: String) {
         val exporter = FractalExporter(plain)
         exporter.saveJPG(path)
+    }
+
+    fun resetCloseJuliaFlag() {
+        _shouldCloseJuliaPanel = false
+    }
+
+    // Артем: Обработка клика по точке
+    fun onPointClicked(x: Float, y: Float) {
+        val re = Converter.xScr2Crt(x, plain)
+        val im = Converter.yScr2Crt(y, plain)
+        val complex = Complex(re, im)
+        onJuliaPointSelected?.invoke(complex)
     }
 
     // --- методы переключения функций и цвета ---
@@ -191,3 +215,4 @@ data class PlainState(
     val yMin: Double,
     val yMax: Double
 )
+

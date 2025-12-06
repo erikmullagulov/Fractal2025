@@ -13,37 +13,36 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.*
 import kotlinx.coroutines.launch
-
+import androidx.compose.foundation.gestures.detectTapGestures
 
 @Composable
 fun PaintPanel(
     modifier: Modifier = Modifier,
-    onImageUpdate: (ImageBitmap) -> Unit = {},
-    onPaint: (DrawScope) -> Unit = {} // оставляем обычную лямбду, paint внутри уже runBlocking
+    onImageUpdate: (ImageBitmap)->Unit = {},
+    onPaint: (DrawScope)->Unit = {},
 ) {
     val graphicsLayer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
-
     Canvas(modifier.drawWithContent {
-        graphicsLayer.record {
-            this@drawWithContent.drawContent()
-        }
-        drawLayer(graphicsLayer)
-
-        scope.launch {
-            onImageUpdate(graphicsLayer.toImageBitmap())
-        }
-    }) {
+                graphicsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(graphicsLayer)
+                scope.launch { onImageUpdate(graphicsLayer.toImageBitmap()) }
+            }
+    ) {
         onPaint(this)
     }
 }
-
 
 @Composable
 fun SelectionPanel(
     offset: Offset,
     size: Size,
     modifier: Modifier = Modifier,
+    // Добавление от Артема
+    onClick: (Offset)->Unit = {},
+    // Конец добавления
     onDragStart: (Offset) -> Unit = {},
     onDragEnd: () -> Unit = {},
     onDrag: (Offset) -> Unit = {},
@@ -53,10 +52,17 @@ fun SelectionPanel(
 ){
     var dragButton by remember { mutableStateOf<PointerButton?>(null) }
 
-    Canvas(modifier = modifier.pointerInput(Unit) {
+    Canvas(modifier = modifier
+        // Детект клика
+        .pointerInput(Unit) {
+            detectTapGestures( onTap = { pos -> onClick(pos) } )
+        }
+            // Конец детекта
+        .pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) {
                 val event = awaitPointerEvent()
+
 
                 when (event.type) {
                     PointerEventType.Press -> {
