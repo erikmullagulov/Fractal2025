@@ -1,4 +1,6 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +25,8 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
@@ -38,9 +42,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import ru.gr05307.ui.PaintPanel
 import ru.gr05307.ui.SelectionPanel
-import ru.gr05307.viewmodels.AppViewModel
+import ru.gr05307.ui.FractalMenu
 import ru.gr05307.julia.ResizableJuliaPanel
 import ru.gr05307.viewmodels.MainViewModel
 import ru.gr05307.math.Complex
@@ -99,83 +105,41 @@ fun MainFractalView(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        // Панель кнопок сверху
-        Row(
+    Box(modifier = modifier) {
+        PaintPanel(
+            modifier = Modifier.fillMaxSize(),
+            onImageUpdate = { image -> viewModel.onImageUpdate(image) },
+            onPaint = { scope -> viewModel.paint(scope) }
+        )
+
+        SelectionPanel(
+            viewModel.selectionOffset,
+            viewModel.selectionSize,
+            Modifier.fillMaxSize(),
+            onClick = { pos -> viewModel.onPointClicked(pos.x, pos.y) },
+            onDragStart = viewModel::onStartSelecting,
+            onDragEnd = viewModel::onStopSelecting,
+            onDrag = viewModel::onSelecting,
+            onPan = viewModel::onPanning,
+        )
+
+        // Кнопки сверху, абсолютно позиционированные
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.LightGray.copy(alpha = 0.1f))
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(16.dp)
         ) {
-            Button(
-                onClick = { viewModel.switchToRainbow() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Rainbow")
-            }
-            Button(
-                onClick = { viewModel.switchToGrayscale() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Grayscale")
-            }
-            Button(
-                onClick = { viewModel.switchToIce() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Ice")
-            }
-            Button(
-                onClick = { viewModel.switchToNewtonColor() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("NewtonColor")
-            }
-            Button(
-                onClick = { viewModel.switchToMandelbrot() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Mandelbrot")
-            }
-            Button(
-                onClick = { viewModel.switchToJulia() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Julia")
-            }
-            Button(
-                onClick = { viewModel.switchToNewton() },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Newton")
-            }
-        }
-
-        // Область с фракталом (занимает всё оставшееся пространство)
-        Box(modifier = Modifier.weight(1f)) {
-            PaintPanel(
-                modifier = Modifier.fillMaxSize(),
-                onImageUpdate = { image -> viewModel.onImageUpdate(image) },
-                onPaint = { scope -> viewModel.paint(scope) }
-            )
-            SelectionPanel(
-                viewModel.selectionOffset,
-                viewModel.selectionSize,
-                Modifier.fillMaxSize(),
-                onClick = { pos -> viewModel.onPointClicked(pos.x, pos.y) },
-                onDragStart = viewModel::onStartSelecting,
-                onDragEnd = viewModel::onStopSelecting,
-                onDrag = viewModel::onSelecting,
-                onPan = viewModel::onPanning,
+            // Меню слева
+            FractalMenu(
+                viewModel = viewModel,
+                modifier = Modifier.align(Alignment.TopStart)
             )
 
+            // Кнопка Назад справа
             Button(
                 onClick = { viewModel.performUndo() },
                 enabled = viewModel.canUndo(),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
+                modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Text("Назад")
             }
