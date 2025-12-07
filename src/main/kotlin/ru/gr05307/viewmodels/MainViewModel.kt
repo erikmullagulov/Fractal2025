@@ -91,7 +91,7 @@ class MainViewModel {
     }
 
 
-    /** Обновление размеров окна с сохранением пропорций */
+    // Обновление размеров окна с сохранением пропорций
     private fun updatePlainSize(newWidth: Float, newHeight: Float) {
         plain.width = newWidth
         plain.height = newHeight
@@ -183,7 +183,7 @@ class MainViewModel {
         }
     }
 
-    /** Обновление выделяемой области */
+    // Обновление выделяемой области
     fun onSelecting(offset: Offset) {
         if (!isTourPlaying)
             selectionSize = Size(selectionSize.width + offset.x, selectionSize.height + offset.y)
@@ -256,10 +256,7 @@ class MainViewModel {
                         val easedProgress = easeInOutCubic(segmentProgress)
 
                         // update plane coordinates directly
-                        plain.xMin = interpolate(from.xMin, to.xMin, easedProgress)
-                        plain.xMax = interpolate(from.xMax, to.xMax, easedProgress)
-                        plain.yMin = interpolate(from.yMin, to.yMin, easedProgress)
-                        plain.yMax = interpolate(from.yMax, to.yMax, easedProgress)
+                        interpolateView(from, to, easedProgress)
 
                         currentTourFrame = frame
                         tourProgress = frame.toFloat() /totalTourFrames
@@ -307,10 +304,6 @@ class MainViewModel {
 
     private fun easeInOutCubic(t: Double): Double {
         return if (t < 0.5) 4 * t * t * t else 1 - (-2 * t + 2).pow(3) / 2
-    }
-
-    fun launch(block: suspend CoroutineScope.() -> Unit): Job {
-        return coroutineScope.launch(block = block)
     }
 
     fun canUndo(): Boolean = undoManager.canUndo()

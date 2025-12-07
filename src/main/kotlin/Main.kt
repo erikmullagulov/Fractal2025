@@ -1,5 +1,4 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,7 +24,6 @@ import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -37,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -49,6 +46,7 @@ import ru.gr05307.viewmodels.MainViewModel
 import ru.gr05307.math.Complex
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +59,9 @@ import androidx.compose.material.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Dp
 import ru.gr05307.viewmodels.JuliaViewModel
 
 
@@ -207,6 +208,37 @@ fun MainFractalView(
     }
 }
 
+// Custom stop icon during keyframe playback
+@Composable
+fun StopIcon(
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 48.dp,
+    isActive: Boolean = false,
+    color: Color = Color.Black,
+    padding: Float = 0.1f // Relative padding inside icon (0-0.5)
+) {
+    Canvas(
+        modifier = modifier.size(iconSize)
+    ) {
+        val totalWidth = size.width
+        val totalHeight = size.height
+
+        // Calculate padding in pixels
+        val paddingPx = totalWidth * padding
+
+        // Draw square
+        drawRect(
+            color = color,
+            alpha = if (!isActive) .5f else 1.0f,
+            topLeft = Offset(x = paddingPx, y = paddingPx),
+            size = Size(
+                width = totalWidth - 2 * paddingPx,
+                height = totalHeight - 2 * paddingPx
+            )
+        )
+    }
+}
+
 @Composable
 fun TourControlPanel(
     viewModel: MainViewModel,
@@ -275,7 +307,6 @@ fun TourControlPanel(
         Divider(modifier = Modifier.padding(vertical = 8.dp))
 
         // Tour controls
-        Text("Make", style = MaterialTheme.typography.subtitle1)
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -293,7 +324,8 @@ fun TourControlPanel(
                 enabled = viewModel.isTourPlaying,
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Stop")
+                //Icon(Icons.Default.Close, contentDescription = "Stop")
+                StopIcon(modifier = Modifier, 18.dp)
             }
         }
 
