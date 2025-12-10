@@ -172,7 +172,7 @@ fun ColorSelectionButtons(viewModel: MainViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MenuButton(onClick = { viewModel.switchToRainbow() }, text = "Rainbow")
         MenuButton(onClick = { viewModel.switchToGrayscale() }, text = "Grayscale")
-        MenuButton(onClick = { viewModel.switchToIce() }, text = "Ice")
+        //MenuButton(onClick = { viewModel.switchToIce() }, text = "Ice")
         MenuButton(onClick = { viewModel.switchToNewtonColor() }, text = "Newton Color")
     }
 }
@@ -201,7 +201,7 @@ fun SavingLoadingButtons(viewModel: MainViewModel) {
                     when (data.colorType) {
                         "rainbow" -> viewModel.switchToRainbow()
                         "grayscale" -> viewModel.switchToGrayscale()
-                        "ice" -> viewModel.switchToIce()
+                        //"ice" -> viewModel.switchToIce()
                         "newtonColor" -> viewModel.switchToNewtonColor()
                     }
                 }
@@ -228,7 +228,7 @@ fun SavingLoadingButtons(viewModel: MainViewModel) {
                     val col = when (viewModel.currentColorFuncPublic) {
                         rainbow -> "rainbow"
                         grayscale -> "grayscale"
-                        iceGradient -> "ice"
+                        //iceGradient -> "ice"
                         newtonColor -> "newtonColor"
                         else -> "rainbow"
                     }
