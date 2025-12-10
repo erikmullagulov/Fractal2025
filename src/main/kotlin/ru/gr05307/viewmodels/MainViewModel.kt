@@ -240,6 +240,7 @@ class MainViewModel {
 
         // Reorder frames by frame number to maintain order
         reorderFramesByNumber()
+        onTourKeyframesChanged()
     }
 
 
@@ -282,7 +283,7 @@ class MainViewModel {
 
             // After removal, we could optionally renumber frames
             renumberAllFrames()
-
+            onTourKeyframesChanged()
         }
     }
 
@@ -352,6 +353,13 @@ class MainViewModel {
         }
     }
 
+    private var cachedFrames: List<ImageBitmap>? = null
+    private var tourNeedsRender: Boolean = true
+
+    fun onTourKeyframesChanged() {
+        tourNeedsRender = true
+    }
+
     fun startTour() {
         if (tourKeyframes.size < 2) return
 
@@ -364,69 +372,60 @@ class MainViewModel {
         val fps = 60
         val seconds = 2.0
         val framesPerSegment = (fps * seconds).toInt()
+        totalTourFrames = (tourKeyframes.size - 1) * framesPerSegment
 
         tourJob = coroutineScope.launch(Dispatchers.Default) {
             try {
-                totalTourFrames = (tourKeyframes.size - 1) * framesPerSegment
+                if (cachedFrames == null || tourNeedsRender) {
+                    val renderJobs = mutableListOf<Deferred<Pair<Int, ImageBitmap>>>()
+                    var frameNumber = 0
 
-                val renderJobs = mutableListOf<Deferred<Pair<Int, ImageBitmap>>>()
-                var frameNumber = 0
+                    for (i in 0 until tourKeyframes.size - 1) {
+                        val from = tourKeyframes[i]
+                        val to = tourKeyframes[i + 1]
 
-                for (i in 0 until tourKeyframes.size - 1) {
-                    val from = tourKeyframes[i]
-                    val to = tourKeyframes[i + 1]
+                        for (f in 0 until framesPerSegment) {
+                            val tmp = frameNumber
+                            val t = f.toDouble() / (framesPerSegment - 1)
+                            val eased = easeInOutCubic(t)
 
-                    for (f in 0 until framesPerSegment) {
+                            renderJobs += async(Dispatchers.Default) {
+                                val p = Plain(
+                                    xMin = interpolate(from.xMin, to.xMin, eased),
+                                    xMax = interpolate(from.xMax, to.xMax, eased),
+                                    yMin = interpolate(from.yMin, to.yMin, eased),
+                                    yMax = interpolate(from.yMax, to.yMax, eased),
+                                    width = plain.width,
+                                    height = plain.height
+                                )
+                                val painter = FractalPainter(p, currentFractalFunc, currentColorFunc)
+                                val image = plainToImage(p, painter)
+                                tmp to image
+                            }
 
-                        val tmp = frameNumber
-
-                        val t = f.toDouble() / (framesPerSegment - 1)
-                        val eased = easeInOutCubic(t)
-
-                        renderJobs += async(Dispatchers.Default) {
-                            val p = Plain(
-                                xMin = interpolate(from.xMin, to.xMin, eased),
-                                xMax = interpolate(from.xMax, to.xMax, eased),
-                                yMin = interpolate(from.yMin, to.yMin, eased),
-                                yMax = interpolate(from.yMax, to.yMax, eased),
-                                width = plain.width,
-                                height = plain.height
-                            )
-
-                            val painter = FractalPainter(p, currentFractalFunc, currentColorFunc)
-                            val image = plainToImage(p, painter)
-
-                            tmp to image
-                        }
-
-                        frameNumber++
-
-                        if (frameNumber % (totalTourFrames / 50).coerceAtLeast(1) == 0) {
-                            withContext(Dispatchers.Default) {
-                                tourRenderProgress =
-                                    frameNumber.toFloat() / totalTourFrames
+                            frameNumber++
+                            if (frameNumber % (totalTourFrames / 50).coerceAtLeast(1) == 0) {
+                                withContext(Dispatchers.Default) {
+                                    tourRenderProgress = frameNumber.toFloat() / totalTourFrames
+                                }
                             }
                         }
                     }
+
+                    cachedFrames = renderJobs.awaitAll().sortedBy { it.first }.map { it.second }
+                    tourNeedsRender = false
+                    renderJobs.clear()
                 }
 
-                val frames = renderJobs.awaitAll()
-                    .sortedBy { it.first }
-                    .map { it.second }
+                withContext(Dispatchers.Default) { isTourRendering = false }
 
-                withContext(Dispatchers.Default) {
-                    isTourRendering = false
-                }
-
-                withContext(Dispatchers.Default) {
+                cachedFrames?.let { frames ->
                     for ((idx, frame) in frames.withIndex()) {
                         if (!isTourPlaying) break
-
                         fractalImage = frame
                         currentTourFrame = idx
                         tourProgress = idx.toFloat() / totalTourFrames
                         mustRepaint = false
-
                         delay(60)
                     }
                 }
