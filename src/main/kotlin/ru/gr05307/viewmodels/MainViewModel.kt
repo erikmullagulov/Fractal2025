@@ -42,7 +42,7 @@ import ru.gr05307.rollback.UndoManager
 import java.util.concurrent.Executors
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.cancelAndJoin
-
+import ru.gr05307.audio.MusicForSleep
 class MainViewModel {
     var showJulia by mutableStateOf(true)
     fun setJuliaEnabled(value: Boolean) {
@@ -551,6 +551,9 @@ class MainViewModel {
         currentFractalType = type
         fractalPainter.fractalFunc = f
         mustRepaint = true
+
+        MusicForSleep.playFractalTheme(type)
+
     }
 
     fun setColorFunction(c: ColorFunction, name: String) {
@@ -560,6 +563,7 @@ class MainViewModel {
         fractalPainter.colorFunc = c
         mustRepaint = true
     }
+
     fun switchToRainbow() = setColorFunction(rainbow,"rainbow")
     fun switchToGrayscale() = setColorFunction(grayscale, "grayscale")
     //fun switchToFire() = setColorFunction(fireGradient)
