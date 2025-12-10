@@ -40,6 +40,9 @@ import ru.gr05307.ui.TourControlPanel
 import ru.gr05307.viewmodels.AppViewModel
 import ru.gr05307.viewmodels.JuliaViewModel
 import ru.gr05307.viewmodels.MainViewModel
+import kotlinx.coroutines.*
+import javax.sound.sampled.*
+import java.io.BufferedInputStream
 val NeutralDark = Color(0xFF333333)
 
 
@@ -281,8 +284,29 @@ fun PointInfoCard(c: Complex) {
         }
     }
 }
+fun playWavInBackground(fileName: String) {
+    GlobalScope.launch(Dispatchers.IO) {
+        try {
+            val rawStream = {}.javaClass.classLoader.getResourceAsStream(fileName)
+                ?: error("Файл $fileName не найден в ресурсах")
 
+            val stream = BufferedInputStream(rawStream)
+
+            val audioStream = AudioSystem.getAudioInputStream(stream)
+            val clip = AudioSystem.getClip()
+
+            clip.open(audioStream)
+            clip.loop(Clip.LOOP_CONTINUOUSLY)
+            clip.start()
+
+        } catch (e: Exception) {
+            println("Ошибка воспроизведения: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+}
 fun main(): Unit = application {
+    playWavInBackground("data.wav")
     Window(
         onCloseRequest = ::exitApplication,
         title = "Фрактал - 2025 (гр. 05-307)"
