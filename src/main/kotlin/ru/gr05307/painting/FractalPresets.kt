@@ -10,15 +10,20 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.pow
 
-
+// Функция для множества Мандельброта
 val mandelbrotFunc: FractalFunction = { z, nMax ->
     val m = Mandelbrot(nMax = nMax)
     m.isInSet(z).coerceIn(0f, 1f)
 }
+
+// Функция для множества Жюлиа (теперь создаем экземпляр класса Julia)
 val juliaFunc: FractalFunction = { z, nMax ->
+    // Используем стандартные параметры для Julia
     val j = Julia(nMax = nMax)
     j.iterate(z).coerceIn(0f, 1f)
 }
+
+// Функция для фрактала Ньютона
 val newtonFunc: FractalFunction = { z, nMax ->
     val n = NewtonFractal(nMax)
     n.iterate(z).coerceIn(0f, 1f)

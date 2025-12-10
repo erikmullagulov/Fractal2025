@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.gr05307.math.Complex
+import ru.gr05307.fractal.Julia
 
 @Composable
 fun ResizableJuliaPanel(
@@ -116,20 +117,17 @@ private fun renderResizableJulia(c: Complex, width: Int, height: Int): List<List
 
     val result = List(safeWidth) { MutableList(safeHeight) { Color.Black } }
 
+    // Используем класс Julia из пакета fractal
+    val julia = Julia(c = c, nMax = maxIter)
+
     val scale = 2.0
     for (x in 0 until safeWidth) {
         val re = (x - safeWidth / 2.0) / (safeWidth / 2.0) * scale
         for (y in 0 until safeHeight) {
             val im = (y - safeHeight / 2.0) / (safeHeight / 2.0) * scale
-            var z = Complex(re, im)
-            var iter = 0
-            while (iter < maxIter && z.absoluteValue2 < 4) {
-                z = z * z
-                z = z + c
-                iter++
-            }
-            val t = iter / maxIter.toFloat()
-            result[x][y] = if (iter == maxIter) Color.Black
+            val z = Complex(re, im)
+            val t = julia.iterate(z)
+            result[x][y] = if (t == 1f) Color.Black
             else Color.hsv(t * 360f, 0.8f, 0.9f)
         }
     }
