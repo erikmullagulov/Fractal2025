@@ -197,8 +197,12 @@ class MainViewModel {
 
             selectionSize = Size(0f, 0f)
             mustRepaint = true
-            _shouldCloseJuliaPanel = true
-            shouldCloseJuliaPanel?.invoke(true)
+
+            if (showJulia) {
+                _shouldCloseJuliaPanel = true
+                shouldCloseJuliaPanel?.invoke(true)
+            }
+
         }
     }
 
@@ -434,8 +438,11 @@ class MainViewModel {
             plain.yMax = prevState.yMax
             selectionSize = Size(0f, 0f)
             mustRepaint = true
-            _shouldCloseJuliaPanel = true
-            shouldCloseJuliaPanel?.invoke(true)
+            if (showJulia) {
+                _shouldCloseJuliaPanel = true
+                shouldCloseJuliaPanel?.invoke(true)
+            }
+
         }
     }
 
@@ -450,8 +457,11 @@ class MainViewModel {
         plain.yMax += dy
 
         mustRepaint = true
-        _shouldCloseJuliaPanel = true
-        shouldCloseJuliaPanel?.invoke(true)
+        if (showJulia) {
+            _shouldCloseJuliaPanel = true
+            shouldCloseJuliaPanel?.invoke(true)
+        }
+
     }
 
     fun saveFractalToJpg(path: String) {
@@ -472,7 +482,10 @@ class MainViewModel {
         val re = Converter.xScr2Crt(x, plain)
         val im = Converter.yScr2Crt(y, plain)
         val complex = Complex(re, im)
-        onJuliaPointSelected?.invoke(complex)
+        if (showJulia) {
+            onJuliaPointSelected?.invoke(complex)
+        }
+
     }
 
     // --- методы переключения функций и цвета ---
