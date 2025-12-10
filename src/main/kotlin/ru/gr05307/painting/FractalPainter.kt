@@ -39,10 +39,9 @@ class FractalPainter(
                 val v = fractalFunc(Complex(cx, cy), nMax)
                 val color = colorFunc(v).toArgb()
 
-                // ARGB → RGBA
-                pixels[index++] = ((color shr 16) and 0xFF).toByte() // R
-                pixels[index++] = ((color shr 8) and 0xFF).toByte()  // G
                 pixels[index++] = (color and 0xFF).toByte()          // B
+                pixels[index++] = ((color shr 8) and 0xFF).toByte()  // G
+                pixels[index++] = ((color shr 16) and 0xFF).toByte() // R
                 pixels[index++] = ((color shr 24) and 0xFF).toByte() // A
             }
         }
